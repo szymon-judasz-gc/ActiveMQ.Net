@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using ActiveMQ.Net.Exceptions;
+using ActiveMQ.Net.Transactions;
 using Microsoft.Extensions.Logging;
 
 namespace ActiveMQ.Net.AutoRecovering
@@ -31,6 +32,11 @@ namespace ActiveMQ.Net.AutoRecovering
                     Log.RetryingSendAsync(Logger);
                 }
             }
+        }
+
+        public Task SendAsync(Message message, Transaction transaction, CancellationToken cancellationToken = default)
+        {
+            return _producer.SendAsync(message, transaction, cancellationToken);
         }
 
         public void Send(Message message)

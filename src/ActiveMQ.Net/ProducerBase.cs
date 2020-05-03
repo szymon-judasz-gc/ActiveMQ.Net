@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using ActiveMQ.Net.Exceptions;
+using ActiveMQ.Net.Transactions;
 using Amqp;
 using Amqp.Framing;
 using Microsoft.Extensions.Logging;
@@ -14,27 +15,30 @@ namespace ActiveMQ.Net
 
         private readonly ILogger _logger;
         private readonly SenderLink _senderLink;
+        private readonly TransactionsManager _transactionsManager;
         private readonly IBaseProducerConfiguration _configuration;
 
-        protected ProducerBase(ILoggerFactory loggerFactory, SenderLink senderLink, IBaseProducerConfiguration configuration)
+        protected ProducerBase(ILoggerFactory loggerFactory, SenderLink senderLink, TransactionsManager transactionsManager, IBaseProducerConfiguration configuration)
         {
             _logger = loggerFactory.CreateLogger(GetType());
             _senderLink = senderLink;
+            _transactionsManager = transactionsManager;
             _configuration = configuration;
         }
 
         private bool IsDetaching => _senderLink.LinkState >= LinkState.DetachPipe;
         private bool IsClosed => _senderLink.IsClosed;
 
-        protected Task SendInternalAsync(string address, AddressRoutingType routingType, Message message, CancellationToken cancellationToken = default)
+        protected async Task SendInternalAsync(string address, AddressRoutingType routingType, Message message, Transaction transaction, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();
+
+            var transactionalState = await _transactionsManager.GetTransactionalStateAsync(transaction, cancellationToken).ConfigureAwait(false);
             var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             cancellationToken.Register(() => tcs.TrySetCanceled());
-
             message.DurabilityMode ??= _configuration.MessageDurabilityMode ?? DurabilityMode.Durable;
-            Send(address, routingType, message, null, _onOutcome, tcs);
-            return tcs.Task;
+            Send(address, routingType, message, transactionalState, _onOutcome, tcs);
+            await tcs.Task.ConfigureAwait(false);
         }
 
         private static void OnOutcome(ILink sender, Amqp.Message message, Outcome outcome, object state)
@@ -80,17 +84,18 @@ namespace ActiveMQ.Net
             {
                 throw ProducerClosedException.BecauseProducerDetached();
             }
-            
+
             try
             {
                 if (_configuration.SetMessageCreationTime && !message.CreationTime.HasValue)
                 {
                     message.CreationTime = DateTime.UtcNow;
                 }
+
                 message.Priority ??= _configuration.MessagePriority;
                 message.Properties.To = address;
                 message.MessageAnnotations[SymbolUtils.RoutingType] = routingType.GetRoutingAnnotation();
-                
+
                 _senderLink.Send(message.InnerMessage, deliveryState, callback, state);
                 Log.MessageSent(_logger);
             }

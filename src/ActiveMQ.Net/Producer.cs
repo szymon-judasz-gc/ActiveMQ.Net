@@ -1,5 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
+using ActiveMQ.Net.Transactions;
 using Amqp;
 using Microsoft.Extensions.Logging;
 
@@ -9,9 +10,15 @@ namespace ActiveMQ.Net
     {
         private readonly ProducerConfiguration _configuration;
 
-        public Producer(ILoggerFactory loggerFactory, SenderLink senderLink, ProducerConfiguration configuration) : base(loggerFactory, senderLink, configuration)
+        public Producer(ILoggerFactory loggerFactory, SenderLink senderLink, TransactionsManager transactionsManager, ProducerConfiguration configuration) :
+            base(loggerFactory, senderLink, transactionsManager, configuration)
         {
             _configuration = configuration;
+        }
+
+        public Task SendAsync(Message message, Transaction transaction, CancellationToken cancellationToken = default)
+        {
+            throw new System.NotImplementedException();
         }
 
         public Task SendAsync(Message message, CancellationToken cancellationToken = default)
