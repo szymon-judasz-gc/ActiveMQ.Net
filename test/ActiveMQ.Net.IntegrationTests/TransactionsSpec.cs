@@ -14,10 +14,10 @@ namespace ActiveMQ.Net.IntegrationTests
         }
 
         [Fact]
-        public async Task Should_send_messages()
+        public async Task Should_deliver_messages_when_transaction_committed()
         {
             await using var connection = await CreateConnection();
-            var address = nameof(Should_send_messages);
+            var address = nameof(Should_deliver_messages_when_transaction_committed);
             await using var producer = await connection.CreateProducerAsync(address, AddressRoutingType.Anycast);
             await using var consumer = await connection.CreateConsumerAsync(address, QueueRoutingType.Anycast);
 
@@ -36,6 +36,23 @@ namespace ActiveMQ.Net.IntegrationTests
             
             consumer.Accept(msg1);
             consumer.Accept(msg2);
+        }
+
+        [Fact]
+        public async Task Should_not_deliver_any_messages_when_transaction_rolled_back()
+        {
+            await using var connection = await CreateConnection();
+            var address = nameof(Should_deliver_messages_when_transaction_committed);
+            await using var producer = await connection.CreateProducerAsync(address, AddressRoutingType.Anycast);
+            await using var consumer = await connection.CreateConsumerAsync(address, QueueRoutingType.Anycast);
+
+            var transaction = new Transaction();
+            await producer.SendAsync(new Message("foo1"), transaction);
+            await producer.SendAsync(new Message("foo2"), transaction);
+
+            await transaction.RollbackAsync();
+
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => await consumer.ReceiveAsync(new CancellationTokenSource(TimeSpan.FromMilliseconds(500)).Token));
         }
     }
 }

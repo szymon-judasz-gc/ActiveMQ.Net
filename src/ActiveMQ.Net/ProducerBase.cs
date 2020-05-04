@@ -33,7 +33,7 @@ namespace ActiveMQ.Net
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var transactionalState = await _transactionsManager.GetTransactionalStateAsync(transaction, _senderLink, cancellationToken).ConfigureAwait(false);
+            var transactionalState = await _transactionsManager.GetTransactionalStateAsync(transaction, cancellationToken).ConfigureAwait(false);
             var tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
             cancellationToken.Register(() => tcs.TrySetCanceled());
             message.DurabilityMode ??= _configuration.MessageDurabilityMode ?? DurabilityMode.Durable;

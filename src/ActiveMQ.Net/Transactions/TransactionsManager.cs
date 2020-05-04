@@ -17,7 +17,7 @@ namespace ActiveMQ.Net.Transactions
             _connection = connection;
         }
 
-        public async ValueTask<TransactionalState> GetTransactionalStateAsync(Transaction transaction, SenderLink senderLink, CancellationToken cancellationToken)
+        public async ValueTask<TransactionalState> GetTransactionalStateAsync(Transaction transaction, CancellationToken cancellationToken)
         {
             if (transaction == null)
             {
@@ -31,13 +31,13 @@ namespace ActiveMQ.Net.Transactions
 
             using (await _mutex.LockAsync().ConfigureAwait(false))
             {
-                await EnlistAsync(transaction, senderLink, cancellationToken).ConfigureAwait(false);
+                await EnlistAsync(transaction, cancellationToken).ConfigureAwait(false);
             }
 
             return transaction.TransactionalState;
         }
 
-        private async Task EnlistAsync(Transaction transaction, SenderLink senderLink, CancellationToken cancellationToken)
+        private async Task EnlistAsync(Transaction transaction, CancellationToken cancellationToken)
         {
             var session = new Session(_connection);
             _controller = new Controller(session);
