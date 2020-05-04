@@ -54,5 +54,59 @@ namespace ActiveMQ.Net.IntegrationTests
 
             await Assert.ThrowsAsync<OperationCanceledException>(async () => await consumer.ReceiveAsync(new CancellationTokenSource(TimeSpan.FromMilliseconds(500)).Token));
         }
+        
+        [Fact]
+        public async Task Should_handle_two_transactions_independently_using_one_producer()
+        {
+            await using var connection = await CreateConnection();
+            var address = nameof(Should_handle_two_transactions_independently_using_one_producer);
+            await using var producer = await connection.CreateProducerAsync(address, AddressRoutingType.Anycast);
+            await using var consumer = await connection.CreateConsumerAsync(address, QueueRoutingType.Anycast);
+
+            var transaction1 = new Transaction();
+            var transaction2 = new Transaction();
+            await producer.SendAsync(new Message(1), transaction1);
+            await producer.SendAsync(new Message(2), transaction1);
+            await producer.SendAsync(new Message(3), transaction2);
+            await producer.SendAsync(new Message(4), transaction2);
+
+            await transaction1.CommitAsync();
+            await transaction2.CommitAsync();
+
+            for (int i = 1; i <= 4; i++)
+            {
+                var msg = await consumer.ReceiveAsync(CancellationToken);
+                Assert.Equal(i, msg.GetBody<int>());
+                consumer.Accept(msg);
+            }
+        }
+        
+        [Fact]
+        public async Task Should_handle_two_transactions_independently_using_one_producer_when_first_committed_and_second_rolled_back()
+        {
+            await using var connection = await CreateConnection();
+            var address = nameof(Should_handle_two_transactions_independently_using_one_producer);
+            await using var producer = await connection.CreateProducerAsync(address, AddressRoutingType.Anycast);
+            await using var consumer = await connection.CreateConsumerAsync(address, QueueRoutingType.Anycast);
+
+            var transaction1 = new Transaction();
+            var transaction2 = new Transaction();
+            await producer.SendAsync(new Message(1), transaction1);
+            await producer.SendAsync(new Message(2), transaction1);
+            await producer.SendAsync(new Message(3), transaction2);
+            await producer.SendAsync(new Message(4), transaction2);
+
+            await transaction1.CommitAsync();
+            await transaction2.RollbackAsync();
+
+            for (int i = 1; i <= 2; i++)
+            {
+                var msg = await consumer.ReceiveAsync(CancellationToken);
+                Assert.Equal(i, msg.GetBody<int>());
+                consumer.Accept(msg);
+            }
+            
+            await Assert.ThrowsAsync<OperationCanceledException>(async () => await consumer.ReceiveAsync(new CancellationTokenSource(TimeSpan.FromMilliseconds(500)).Token));
+        }
     }
 }
