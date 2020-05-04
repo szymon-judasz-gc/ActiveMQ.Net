@@ -39,8 +39,12 @@ namespace ActiveMQ.Net.Transactions
 
         private async Task EnlistAsync(Transaction transaction, CancellationToken cancellationToken)
         {
-            var session = new Session(_connection);
-            _controller = new Controller(session);
+            if (_controller == null)
+            {
+                var session = new Session(_connection);
+                _controller = new Controller(session);                
+            }
+
             var txnId = await _controller.DeclareAsync(cancellationToken);
             var transactionalState = new TransactionalState { TxnId = txnId };
             transaction.Initialize(transactionalState, _controller);

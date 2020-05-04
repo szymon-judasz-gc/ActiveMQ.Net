@@ -33,7 +33,7 @@ namespace ActiveMQ.Net.IntegrationTests
             var msg2 = await consumer.ReceiveAsync(CancellationToken);
             Assert.Equal("foo1", msg1.GetBody<string>());
             Assert.Equal("foo2", msg2.GetBody<string>());
-            
+
             consumer.Accept(msg1);
             consumer.Accept(msg2);
         }
@@ -54,7 +54,7 @@ namespace ActiveMQ.Net.IntegrationTests
 
             await Assert.ThrowsAsync<OperationCanceledException>(async () => await consumer.ReceiveAsync(new CancellationTokenSource(TimeSpan.FromMilliseconds(500)).Token));
         }
-        
+
         [Fact]
         public async Task Should_handle_two_transactions_independently_using_one_producer()
         {
@@ -80,7 +80,7 @@ namespace ActiveMQ.Net.IntegrationTests
                 consumer.Accept(msg);
             }
         }
-        
+
         [Fact]
         public async Task Should_handle_two_transactions_independently_using_one_producer_when_first_committed_and_second_rolled_back()
         {
@@ -105,7 +105,7 @@ namespace ActiveMQ.Net.IntegrationTests
                 Assert.Equal(i, msg.GetBody<int>());
                 consumer.Accept(msg);
             }
-            
+
             await Assert.ThrowsAsync<OperationCanceledException>(async () => await consumer.ReceiveAsync(new CancellationTokenSource(TimeSpan.FromMilliseconds(500)).Token));
         }
     }
