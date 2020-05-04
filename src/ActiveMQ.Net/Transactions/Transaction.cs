@@ -9,7 +9,6 @@ namespace ActiveMQ.Net.Transactions
     {
         private TransactionalState _transactionalState;
         private Controller _controller;
-        public byte[] TxnId { get; set; }
 
         public TransactionalState TransactionalState => _transactionalState;
 

@@ -29,10 +29,13 @@ namespace ActiveMQ.Net.IntegrationTests
 
             await transaction.CommitAsync();
 
-            var msg1 = await consumer.ReceiveAsync();
-            var msg2 = await consumer.ReceiveAsync();
+            var msg1 = await consumer.ReceiveAsync(CancellationToken);
+            var msg2 = await consumer.ReceiveAsync(CancellationToken);
             Assert.Equal("foo1", msg1.GetBody<string>());
             Assert.Equal("foo2", msg2.GetBody<string>());
+            
+            consumer.Accept(msg1);
+            consumer.Accept(msg2);
         }
     }
 }

@@ -18,12 +18,7 @@ namespace ActiveMQ.Net
 
         public Task SendAsync(Message message, Transaction transaction, CancellationToken cancellationToken = default)
         {
-            throw new System.NotImplementedException();
-        }
-
-        public Task SendAsync(Message message, CancellationToken cancellationToken = default)
-        {
-            return SendInternalAsync(_configuration.Address, _configuration.RoutingType, message, cancellationToken);
+            return SendInternalAsync(_configuration.Address, _configuration.RoutingType, message, transaction, cancellationToken);
         }
 
         public void Send(Message message)
